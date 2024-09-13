@@ -3,6 +3,8 @@
 ```
 git clone https://github.com/IVanchekus/KS_LAB1
 
+cd KS_LAB1
+
 python -m venv appvenv
 
 # Для Linux
