@@ -1,4 +1,3 @@
-import os
 import uuid
 from pathlib import Path
 
@@ -9,15 +8,22 @@ class TelegramBotController:
         self.deep_face_controller = deep_face_controller
         self.register_handlers()
 
+
     # Регистрация всего на свете
     def register_handlers(self):
         self.bot.message_handler(content_types=["text"])(self.get_text_message)
         self.bot.message_handler(content_types=["photo"])(self.get_photo_messages)
         self.bot.message_handler(content_types=["document"])(self.get_document_messages)
 
+
     # Получить текстовое сообщение
     def get_text_message(self, message):
-        self.bot.send_message(message.from_user.id, "Прикрепи фотографию для того, чтобы я нашел совпадения")
+        self.bot.send_message(
+            message.from_user.id,
+            "Прикрепи фотографию, на которой лишь _1 человек_",
+            parse_mode="Markdown"
+        )
+
 
     # Получить фото
     def get_photo_messages(self, message):
@@ -28,7 +34,10 @@ class TelegramBotController:
             self.check_find(full_src, message)
 
             self.bot.reply_to(message, "Сохранили")
-        except Exception as ex: self.send_exception(message, ex)
+        except Exception as ex: 
+            Path(full_src).unlink()
+            self.send_exception(message, ex)
+
 
     # Получить файл
     def get_document_messages(self, message):
@@ -39,7 +48,9 @@ class TelegramBotController:
             self.check_find(full_src, message)
 
             self.bot.reply_to(message, "Сохранили")
-        except Exception as ex: self.send_exception(message, ex)
+        except Exception as ex:
+            Path(full_src).unlink()
+            self.send_exception(message, ex)
 
 
     def get_file(self, file_info):
@@ -52,8 +63,12 @@ class TelegramBotController:
 
         return full_src
     
+
     def check_find(self, full_src, message):
         res = self.deep_face_controller.face_find(full_src, "./saved_photos")
+
+        if len(res) == 0: self.bot.send_message(message.from_user.id, "Не нашел схожих лиц. Попробуй еще раз!")
+
         for value in res:
             self.bot.send_photo(
                 message.chat.id,
@@ -61,9 +76,15 @@ class TelegramBotController:
                 caption=f"Сходство: {value["diff"]}%"
             )
 
+
     # Для отправки ошибок
     def send_exception(self, message, exception):
-        self.bot.send_message(message.from_user.id, f"Ошибка: {exception}")
+        self.bot.send_message(
+            message.from_user.id,
+            f"*Ошибка:* {exception}",
+            parse_mode="Markdown"
+        )
+
 
     # Начало работы бота
     def start(self):

@@ -12,5 +12,11 @@ source ./appvenv/bin/activate
 
 pip install -r requirements.txt
 
+cp .env.example .env
+
+# Поменяйте значение TELEGRAM_BOT_API на ваш в файле .env
+
 python main.py
 ```
+
+В конце необходимо подождать загрузку пакетов нейронки

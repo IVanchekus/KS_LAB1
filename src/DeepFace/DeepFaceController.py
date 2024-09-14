@@ -6,13 +6,17 @@ class DeepFaceController:
         result = DeepFace.verify(img1_path = image1_path, img2_path = image2_path)
         return result
     
+
     def face_find(self, image_path, folder_path):
         try:
+            detector = self.face_detector(image_path)
+            if detector > 1:
+                raise Exception("На фото больше 1 лица")
+
             result_find = DeepFace.find(img_path=image_path, db_path=folder_path, silent=True)
 
             result = []
             for value in result_find:
-                print(value)
                 for i in range(len(value.identity)):
                     if (value.identity[i] == image_path): continue
                     result.append({
@@ -24,8 +28,16 @@ class DeepFaceController:
             result = result[:3]
             return result
         except Exception as ex:
-            raise Exception("Не могу найти лиц")
+            if ("not be detected" in str(ex)): raise Exception("Не могу найти лиц")
+            raise Exception(ex)
     
+
     def face_analyze(self, image_path):
         result = DeepFace.analyze(img_path = image_path, actions = ['age', 'gender', 'race', 'emotion'])
         return result
+    
+    def face_detector(self, image_path):
+        detected_faces = DeepFace.extract_faces(image_path)
+
+        return len(detected_faces)
+        
