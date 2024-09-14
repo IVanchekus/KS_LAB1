@@ -1,8 +1,5 @@
 from pathlib import Path
 from deepface import DeepFace
-import os
-
-import tensorflow as tf
 
 class DeepFaceController:
     def face_verify(self, image1_path, image2_path):
@@ -32,12 +29,3 @@ class DeepFaceController:
     def face_analyze(self, image_path):
         result = DeepFace.analyze(img_path = image_path, actions = ['age', 'gender', 'race', 'emotion'])
         return result
-
-# controller = DeepFaceController()
-# iam = "../../saved_photos/WIN_20210831_21_53_37_Pro.jpg"
-# test = "../../saved_photos/"
-
-# ct = DeepFaceController()
-# res = ct.face_find(iam, test)
-# print(res)
-
