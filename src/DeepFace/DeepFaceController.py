@@ -28,7 +28,7 @@ class DeepFaceController:
             result = result[:3]
             return result
         except Exception as ex:
-            if ("not be detected" in str(ex)): raise Exception("Не могу найти лиц")
+            if ("not be detected" in str(ex)): raise Exception("Не могу найти лиц на фото")
             raise Exception(ex)
     
 
