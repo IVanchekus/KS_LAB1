@@ -73,7 +73,7 @@ class TelegramBotController:
             self.bot.send_photo(
                 message.chat.id,
                 open(value["photo_path"], "rb"),
-                caption=f"Сходство: {value["diff"]}%"
+                caption=f"Сходство: {value['diff']}%"
             )
 
 
