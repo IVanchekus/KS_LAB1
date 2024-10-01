@@ -122,7 +122,7 @@ class TelegramBotController:
                         caption=f"Сходство: {value['diff']}%"
                     )
             elif user.call_data == "get_meme":
-                res = self.deep_face_controller.face_analyze(full_src)
+                res = self.deep_face_controller.face_analyze(full_src)[0]
                 self.bot.send_message(
                     message.from_user.id,
                     f"{res}"
