@@ -3,6 +3,7 @@ from pathlib import Path
 from telebot import types
 from addict import Dict
 from state.state import user_state
+from state.dicts import genders
 
 # Контроллер для управления ботом
 class TelegramBotController:
@@ -109,28 +110,48 @@ class TelegramBotController:
     def check_find(self, full_src, message):
         try: 
             user = user_state[message.from_user.id]
-
-            if user.call_data == "face_find":
-                res = self.deep_face_controller.face_find(full_src, "./storage/saved_photos")
-
-                if len(res) == 0: self.bot.send_message(message.from_user.id, "Не нашел схожих лиц. Попробуй еще раз!")
-
-                for value in res:
-                    self.bot.send_photo(
-                        message.chat.id,
-                        open(value["photo_path"], "rb"),
-                        caption=f"Сходство: {value['diff']}%"
-                    )
-            elif user.call_data == "get_meme":
-                res = self.deep_face_controller.face_analyze(full_src)[0]
-                self.bot.send_message(
-                    message.from_user.id,
-                    f"{res}"
-                )
-
         except Exception as ex:
             raise Exception("А зачем мне эта фотка? Напиши /start")
+        
+        if user.call_data == "face_find":
+            res = self.deep_face_controller.face_find(full_src, "./storage/saved_photos")
 
+            if len(res) == 0: self.bot.send_message(message.from_user.id, "Не нашел схожих лиц. Попробуй еще раз!")
+
+            for value in res:
+                self.bot.send_photo(
+                    message.chat.id,
+                    open(value["photo_path"], "rb"),
+                    caption=f"Сходство: {value['diff']}%"
+                )
+
+        elif user.call_data == "get_meme":
+            res = self.deep_face_controller.face_analyze(full_src)[0]
+            age = res["age"]
+            gender = res["dominant_gender"]
+
+            self.bot.send_message(
+                message.from_user.id,
+                f"Я думаю, что ваш пол *{genders[gender]}* и вам *{age} лет*. Давайте подберу вам приколюшку!",
+                parse_mode="Markdown"
+            )
+            self.send_meme(message, (gender, age))
+
+
+    def send_meme(self, message, user_info):
+        self.bot.send_message(
+            message.from_user.id,
+            self.message_from_gender_age(*user_info)
+        )
+
+
+    def message_from_gender_age(self, gender, age):
+        text = ''
+        if age < 18: text += "Привет, " + ("юный джентельмен!" if gender == "Man" else "юная леди!")
+        elif age in range(18, 30): text += "Здравствуй, " + ("молодой человек!" if gender == "Man" else "молодая девушка!")
+        elif age in range(30, 40): text += "Приветствую, " + ("уважаемый мужчина!" if gender == "Man" else "уважаемая женщина!")
+        elif age >= 40: text += "Добрый день, " + ("опыйтный джентельмен!" if gender == "Man" else "опытная леди!")
+        return text
 
     # Для отправки ошибок
     def send_exception(self, message, exception):
