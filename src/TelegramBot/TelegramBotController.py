@@ -4,6 +4,9 @@ from telebot import types
 from addict import Dict
 from state.state import user_state
 from state.dicts import genders
+import random
+from colorthief import ColorThief
+import math
 
 # Контроллер для управления ботом
 class TelegramBotController:
@@ -15,14 +18,14 @@ class TelegramBotController:
 
     # Регистрация всего на свете
     def register_handlers(self):
-        self.bot.message_handler(commands=["start"])(self.startBot)
+        self.bot.message_handler(commands=["start"])(self.start_command)
         self.bot.callback_query_handler(func=lambda call: True)(self.callback_query)
         self.bot.message_handler(content_types=["text"])(self.get_text_message)
         self.bot.message_handler(content_types=["photo"])(self.get_photo_messages)
         self.bot.message_handler(content_types=["document"])(self.get_document_messages)
 
 
-    def startBot(self, message): # TODO поменять функцию
+    def start_command(self, message): # TODO поменять функцию
         keyboard = types.InlineKeyboardMarkup()
         button1 = types.InlineKeyboardButton("Поиск похожих людей", callback_data="face_find")
         button2 = types.InlineKeyboardButton("Получить приколюшку", callback_data="get_meme")
@@ -32,7 +35,7 @@ class TelegramBotController:
         user_state[message.from_user.id].keyboard_message = self.bot.send_message(
             message.chat.id,
             "Привет! Выбери то, чем хочешь заняться",
-            reply_markup=keyboard    
+            reply_markup=keyboard
         )
 
 
@@ -135,23 +138,66 @@ class TelegramBotController:
                 f"Я думаю, что ваш пол *{genders[gender]}* и вам *{age} лет*. Давайте подберу вам приколюшку!",
                 parse_mode="Markdown"
             )
-            self.send_meme(message, (gender, age))
+            self.send_meme(message, (gender, age), full_src)
 
 
-    def send_meme(self, message, user_info):
+    def send_meme(self, message, user_info, full_src):
+        text, age_interval = self.message_from_gender_age(*user_info)
+        # Отправить приветственное сообщение
         self.bot.send_message(
             message.from_user.id,
-            self.message_from_gender_age(*user_info)
+            text
+        )
+
+        # Отправить рандомный мем по возрасту
+        self.bot.send_photo(
+            message.from_user.id,
+            open(self.random_meme_from_gender_age(*user_info, age_interval, full_src), "rb")
         )
 
 
     def message_from_gender_age(self, gender, age):
         text = ''
-        if age < 18: text += "Привет, " + ("юный джентельмен!" if gender == "Man" else "юная леди!")
-        elif age in range(18, 30): text += "Здравствуй, " + ("молодой человек!" if gender == "Man" else "молодая девушка!")
-        elif age in range(30, 40): text += "Приветствую, " + ("уважаемый мужчина!" if gender == "Man" else "уважаемая женщина!")
-        elif age >= 40: text += "Добрый день, " + ("опыйтный джентельмен!" if gender == "Man" else "опытная леди!")
-        return text
+        age_interval = ''
+        if age < 18:
+            text += "Привет, " + ("юный джентельмен!" if gender == "Man" else "юная леди!")
+            age_interval = '18'
+        elif age in range(18, 30):
+            text += "Здравствуй, " + ("молодой человек!" if gender == "Man" else "молодая девушка!")
+            age_interval = '18-30'
+        elif age in range(30, 40):
+            text += "Приветствую, " + ("уважаемый мужчина!" if gender == "Man" else "уважаемая женщина!")
+            age_interval = '30-40'
+        elif age >= 40:
+            text += "Добрый день, " + ("опыйтный джентельмен!" if gender == "Man" else "опытная леди!")
+            age_interval = '40'
+        return text, age_interval
+    
+    def random_meme_from_gender_age(self, gender, age, age_interval, full_src):
+        src = Path(f"./storage/memes/{age_interval}/{gender}")
+        files = list(src.iterdir())
+        image_ext = {'.jpg', '.jpeg', '.png'}
+        image_files = [f for f in files if f.is_file() and f.suffix.lower() in image_ext]
+
+        dominant_color_full_src = self.check_dominant_color(full_src)
+        distance = 0
+        exit_image = ''
+        for image in image_files:
+            dominant_color_image = self.check_dominant_color(image)
+            new_distance = self.euclidean_distance(dominant_color_full_src, dominant_color_image)
+            if distance < new_distance:
+                distance = new_distance
+                exit_image = image
+
+        return exit_image
+    
+    def euclidean_distance(self, point1, point2):
+        return math.sqrt(sum((x - y) ** 2 for x, y in zip(point1, point2)))
+    
+    def check_dominant_color(self, image):
+        color_thief = ColorThief(image)
+        dominant_color = color_thief.get_color(quality=1)
+        return dominant_color
 
     # Для отправки ошибок
     def send_exception(self, message, exception):
