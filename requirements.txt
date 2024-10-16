@@ -1,10 +1,12 @@
 absl-py==2.1.0
+addict==2.4.0
 astunparse==1.6.3
 beautifulsoup4==4.12.3
 blinker==1.8.2
 certifi==2024.8.30
 charset-normalizer==3.3.2
 click==8.1.7
+colorthief==0.2.1
 deepface==0.0.93
 filelock==3.16.0
 fire==0.6.0
