@@ -4,15 +4,15 @@ from telebot import types
 from addict import Dict
 from state.state import user_state
 from state.dicts import genders
-import random
 from colorthief import ColorThief
 import math
 
 # Контроллер для управления ботом
 class TelegramBotController:
-    def __init__(self, bot, deep_face_controller):
+    def __init__(self, bot, deep_face_controller, pytesseract_contoller):
         self.bot = bot
         self.deep_face_controller = deep_face_controller
+        self.pytesseract_contoller = pytesseract_contoller
         self.register_handlers()
 
 
@@ -29,7 +29,8 @@ class TelegramBotController:
         keyboard = types.InlineKeyboardMarkup()
         button1 = types.InlineKeyboardButton("Поиск похожих людей", callback_data="face_find")
         button2 = types.InlineKeyboardButton("Получить приколюшку", callback_data="get_meme")
-        keyboard.add(button1, button2)
+        button3 = types.InlineKeyboardButton("Получить текст из изображения", callback_data="text_image")
+        keyboard.add(button1, button2, button3)
         
         user_state[message.from_user.id] = Dict()
         user_state[message.from_user.id].keyboard_message = self.bot.send_message(
@@ -60,6 +61,12 @@ class TelegramBotController:
                 "Найдем мем по фотографии. Прикрепи фотографию, на которой лишь _1 человек_",
                 parse_mode="Markdown"
             )
+        elif call.data == "text_image":
+            self.bot.send_message(
+                call.from_user.id,
+                "Найдем текст по фотографии. Прикрепи фотографию, на которой есть текст",
+                parse_mode="Markdown"
+            )
 
 
     # Получить текстовое сообщение
@@ -76,12 +83,12 @@ class TelegramBotController:
         try:
             file_info = self.bot.get_file(message.photo[len(message.photo) - 1].file_id)
 
-            full_src = self.get_file(file_info)
+            full_src = self.get_file(file_info, message)
             self.check_find(full_src, message)
 
-            self.bot.reply_to(message, "Сохранили")
+            self.bot.reply_to(message, "Принял")
         except Exception as ex: 
-            Path(full_src).unlink()
+            if "full_src" in locals(): Path(full_src).unlink()
             self.send_exception(message, ex)
 
 
@@ -90,20 +97,31 @@ class TelegramBotController:
         try:
             file_info = self.bot.get_file(message.document.file_id)
 
-            full_src = self.get_file(file_info)
-            self.check_find(full_src, message)
+            full_src = self.get_file(file_info, message)
+            self.bot.reply_to(message, "Принял")
 
-            self.bot.reply_to(message, "Сохранили")
+            self.check_find(full_src, message)
         except Exception as ex:
             Path(full_src).unlink()
             self.send_exception(message, ex)
 
 
-    def get_file(self, file_info):
+    def get_file(self, file_info, message):
         downloaded_file = self.bot.download_file(file_info.file_path)
 
-        full_src = "./storage/saved_photos/" + uuid.uuid1().hex[:10] + Path(file_info.file_path).suffix
+        full_src = ""
+        try: 
+            user = user_state[message.from_user.id]
+            if user.call_data == {}: raise
 
+            if user.call_data == "text_image":
+                full_src = "./storage/temp/"
+            else:
+                full_src = "./storage/saved_photos/"
+            full_src += uuid.uuid1().hex[:10] + Path(file_info.file_path).suffix            
+        except Exception as ex:
+            raise Exception("Зачем ты мне это скинул? Напиши /start")
+        
         with Path(full_src).open('wb') as new_file:
             new_file.write(downloaded_file)
 
@@ -127,7 +145,6 @@ class TelegramBotController:
                     open(value["photo_path"], "rb"),
                     caption=f"Сходство: {value['diff']}%"
                 )
-
         elif user.call_data == "get_meme":
             res = self.deep_face_controller.face_analyze(full_src)[0]
             age = res["age"]
@@ -139,6 +156,20 @@ class TelegramBotController:
                 parse_mode="Markdown"
             )
             self.send_meme(message, (gender, age), full_src)
+        elif user.call_data == "text_image":
+            res = self.pytesseract_contoller.text_answer_from_img(full_src)
+            print(res)
+
+            self.bot.send_message(
+                message.from_user.id,
+                f"*Текст на изображении:* \n{res["text"]}",
+                parse_mode="Markdown"
+            )
+
+            Path(full_src).unlink()
+
+    def message_from_lang(self, langs):
+        print(132)
 
 
     def send_meme(self, message, user_info, full_src):
