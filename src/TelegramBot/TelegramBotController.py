@@ -158,18 +158,14 @@ class TelegramBotController:
             self.send_meme(message, (gender, age), full_src)
         elif user.call_data == "text_image":
             res = self.pytesseract_contoller.text_answer_from_img(full_src)
-            print(res)
 
             self.bot.send_message(
-                message.from_user.id,
-                f"*Текст на изображении:* \n{res["text"]}",
+                message.from_user.id,   
+                f"*{res['lang']}:* \n{res['text']}",
                 parse_mode="Markdown"
             )
 
             Path(full_src).unlink()
-
-    def message_from_lang(self, langs):
-        print(132)
 
 
     def send_meme(self, message, user_info, full_src):

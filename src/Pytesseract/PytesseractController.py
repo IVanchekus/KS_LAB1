@@ -1,18 +1,18 @@
 import pytesseract
 import os
 from langdetect import detect_langs
-from state.dicts import script_to_lang
+from state.dicts import script_to_lang, lang_to_answer
 
 class PytesseractController:
     def __init__(self, pytesseract_bin):
         if pytesseract_bin: pytesseract.pytesseract.tesseract_cmd = pytesseract_bin
 
     def text_answer_from_img(self, full_src):
-        text = self.detect_text_from_image(full_src)
-        langs = self.lang_detect(text)
+        answer = self.detect_text_from_image(full_src)
+        #langs = self.lang_detect(text)
         return {
-            "text": text,
-            "langs": langs
+            "text": answer[0],
+            "lang": answer[1]
         }
 
     def detect_text_from_image(self, full_src):
@@ -28,7 +28,9 @@ class PytesseractController:
             if not text.strip():
                 raise Exception("Не удалось распознать текст на изображении")
             
-            return text
+            answer = lang_to_answer[script]
+
+            return [text, answer]
         except Exception as ex:
             raise ex
         
