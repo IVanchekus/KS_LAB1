@@ -32,7 +32,7 @@ class PytesseractController:
 
             return [text, answer]
         except Exception as ex:
-            raise ex
+            raise Exception("На изображении плохо видно буквы")
         
     def lang_detect(self, text):
         try:
