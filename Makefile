@@ -1,5 +1,5 @@
 start:
-	@nohup python -u main.py >> ./log/log.log 2>&1 & 
+	@nohup ./venv/bin/python -u main.py >> ./log/log.log 2>&1 & 
 	@echo "Бот запущен"
 
 stop: 
