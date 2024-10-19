@@ -29,8 +29,15 @@ sudo apt install tesseract-ocr-fra
 sudo apt install tesseract-ocr-deu
 
 # Установите значение TESSERACT_BIN в .env, если это необходимо 
+```
 
+Вы можете запустить бота двумя способами:
+```
+# 1) Запустить скриптом
 python main.py
+
+# 2) Запустить в фоновом режиме
+make start
 ```
 
 В конце необходимо подождать загрузку пакетов нейронки
