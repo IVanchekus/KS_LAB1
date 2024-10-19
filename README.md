@@ -37,18 +37,15 @@ python main.py
 
 Чтобы запустить скрипт в фоновом режиме
 ```
-# Запустить на фоне с логированием в файл log.log
-nohup python -u main.py >> log.log &
+# Запустить бота
+make start
 
-# Посмотреть запущенные задачи
-jobs
+# Остановить бота
+make stop
 
-# Посмотреть задачу по main.py
-ps aux | grep main.py
+# Дебаг 
+make debug
 
-# Закрыть задачу по PID
-kill PID
-
-# Отслеживать log.log в прямом эфире
-tail -f log.log
+# Посмотреть что происходит в боте при запуске
+make start debug
 ```
