@@ -9,10 +9,11 @@ import math
 
 # Контроллер для управления ботом
 class TelegramBotController:
-    def __init__(self, bot, deep_face_controller, pytesseract_contoller):
+    def __init__(self, bot, deep_face_controller, pytesseract_contoller, yolo_controller):
         self.bot = bot
         self.deep_face_controller = deep_face_controller
         self.pytesseract_contoller = pytesseract_contoller
+        self.yolo_controller = yolo_controller
         self.register_handlers()
 
 
@@ -23,14 +24,15 @@ class TelegramBotController:
         self.bot.message_handler(content_types=["text"])(self.get_text_message)
         self.bot.message_handler(content_types=["photo"])(self.get_photo_messages)
         self.bot.message_handler(content_types=["document"])(self.get_document_messages)
-
+        self.bot.message_handler(content_types=["video"])(self.get_video_message)
 
     def start_command(self, message): # TODO поменять функцию
         keyboard = types.InlineKeyboardMarkup()
         button1 = types.InlineKeyboardButton("Поиск похожих людей", callback_data="face_find")
         button2 = types.InlineKeyboardButton("Получить приколюшку", callback_data="get_meme")
         button3 = types.InlineKeyboardButton("Получить текст из изображения", callback_data="text_image")
-        keyboard.add(button1, button2, button3)
+        button4 = types.InlineKeyboardButton("Найти объекты в видео", callback_data="video_detector")
+        keyboard.add(button1, button2, button3, button4)
         
         user_state[message.from_user.id] = Dict()
         user_state[message.from_user.id].keyboard_message = self.bot.send_message(
@@ -67,13 +69,29 @@ class TelegramBotController:
                 "Найдем текст по фотографии. Прикрепи фотографию, на которой есть текст",
                 parse_mode="Markdown"
             )
+        elif call.data == "video_detector":
+            self.bot.send_message(
+                call.from_user.id,
+                "Найдем объекты в видео. Прикрепи видео, в котором хочешь найти объекты",
+                parse_mode="Markdown"
+            )
+
+    # Получить видео
+    def get_video_message(self, message):
+        try:
+            file_info = self.bot.get_file(message.video.file_id)
+            full_src = self.get_file(file_info, message)
+            self.check_find(full_src, message)
+        except Exception as ex:
+            Path(full_src).unlink()
+            self.send_exception(message, ex)
 
 
     # Получить текстовое сообщение
     def get_text_message(self, message):
         self.bot.send_message(
             message.from_user.id,
-            "Прикрепи фотографию, на которой лишь _1 человек_",
+            "Напиши /start",
             parse_mode="Markdown"
         )
 
@@ -82,11 +100,8 @@ class TelegramBotController:
     def get_photo_messages(self, message):
         try:
             file_info = self.bot.get_file(message.photo[len(message.photo) - 1].file_id)
-
             full_src = self.get_file(file_info, message)
             self.check_find(full_src, message)
-
-            self.bot.reply_to(message, "Принял")
         except Exception as ex: 
             if "full_src" in locals(): Path(full_src).unlink()
             self.send_exception(message, ex)
@@ -98,8 +113,6 @@ class TelegramBotController:
             file_info = self.bot.get_file(message.document.file_id)
 
             full_src = self.get_file(file_info, message)
-            self.bot.reply_to(message, "Принял")
-
             self.check_find(full_src, message)
         except Exception as ex:
             Path(full_src).unlink()
@@ -116,8 +129,10 @@ class TelegramBotController:
 
             if user.call_data == "text_image":
                 full_src = "./storage/temp/"
-            else:
+            elif user.call_data == "face_find":
                 full_src = "./storage/saved_photos/"
+            elif user.call_data == "video_detector":
+                full_src = "./storage/videos/"
             full_src += uuid.uuid1().hex[:10] + Path(file_info.file_path).suffix            
         except Exception as ex:
             raise Exception("Зачем ты мне это скинул? Напиши /start")
@@ -132,7 +147,9 @@ class TelegramBotController:
         try: 
             user = user_state[message.from_user.id]
         except Exception as ex:
-            raise Exception("А зачем мне эта фотка? Напиши /start")
+            raise Exception("А зачем мне это? Напиши /start")
+        
+        self.bot.reply_to(message, "Принял. Мне нужно подумать...")
         
         if user.call_data == "face_find":
             res = self.deep_face_controller.face_find(full_src, "./storage/saved_photos")
@@ -164,7 +181,15 @@ class TelegramBotController:
                 f"*{res['lang']}:* \n{res['text']}",
                 parse_mode="Markdown"
             )
+            Path(full_src).unlink()
+        elif user.call_data == "video_detector":
+            res = self.yolo_controller.process_video(full_src)
 
+            self.bot.send_message(
+                message.from_user.id,   
+                self.yolo_controller.send_detected_objects_message(res),
+                parse_mode="Markdown"
+            )
             Path(full_src).unlink()
 
 
