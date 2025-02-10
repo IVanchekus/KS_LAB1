@@ -94,7 +94,7 @@ class TelegramBotController:
             user = user_state[message.from_user.id]
             if user.call_data == {}: raise
 
-            if user.call_data == "face_find":
+            if user.call_data == "get_emotions":
                 full_src = "./storage/saved_photos/"
             full_src += uuid.uuid1().hex[:10] + Path(file_info.file_path).suffix            
         except Exception as ex:
