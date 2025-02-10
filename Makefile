@@ -1,4 +1,5 @@
 start:
+	make stop
 	@nohup ./appvenv/bin/python -u main.py >> ./log/log.log 2>&1 & 
 	@echo "Бот запущен"
 
